@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Vector;
 
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.store.LockObtainFailedException;
@@ -20,9 +21,11 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
@@ -39,6 +42,7 @@ public class RocchioExpander  {
 	private final int termsLimit;
 	private Analyzer analyzer;
 	private final String field;
+	private static IndexReader idxreader;
 
 	public RocchioExpander(Analyzer analyzer, final String field,
 			       float alpha, float beta, float gama,
@@ -52,7 +56,7 @@ public class RocchioExpander  {
 		this.termsLimit = termsLimit;
 	}
 
-	public Query expand(final Query original, final List<Document> relevantDocs)
+	public Query expandRocchio(final Query original, final List<Document> relevantDocs)
 		throws ParseException, CorruptIndexException,
 		       LockObtainFailedException, IOException {
 		Directory index = createIndex(relevantDocs);
@@ -82,6 +86,7 @@ public class RocchioExpander  {
 		return rocchioQuery;
 	}
 
+	
 	private Directory createIndex(List<Document> relevantDocs)
 		throws CorruptIndexException, LockObtainFailedException, IOException {
 		Directory index = new RAMDirectory();
@@ -96,7 +101,7 @@ public class RocchioExpander  {
 
 	private List<Entry<String, Float>> getTermScoreList(Directory index) throws CorruptIndexException, IOException {
 		Map<String, Float> termScoreMap = new HashMap<String, Float>();
-		IndexReader idxreader = IndexReader.open(index, true);
+		idxreader = IndexReader.open(index, true);
 		TermEnum termEnum = idxreader.terms();
 		TermDocs termDocs = idxreader.termDocs();
 		int docsnum = idxreader.numDocs();

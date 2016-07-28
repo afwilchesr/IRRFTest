@@ -1,6 +1,7 @@
 package irrftest.views;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.annotation.PostConstruct;
@@ -8,8 +9,10 @@ import javax.annotation.PreDestroy;
 import javax.swing.JOptionPane;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -30,20 +33,21 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 
 import indexing.Result;
-import indexing.Searcher;
+import indexing.FileSearcher;
 
 public class IRSearcher extends ViewPart {
 	private Text txtSearch;
 	private Button btnSearch;
 	private Button btnFeedback;
 	private Table tblResults;
-	private Searcher searcher;
+	private FileSearcher searcher;
 	private Query query;
 	private ArrayList<Result> results;
-	private ArrayList<Document> relevantDocuments;
-	private ArrayList<Document> iRelevantDocuments;
+	private ArrayList<ScoreDoc> relevantDocuments;
+	private ArrayList<ScoreDoc> iRelevantDocuments;
 
-	public IRSearcher() {
+	public IRSearcher() throws CorruptIndexException, IOException {
+		searcher = new FileSearcher();
 	}
 
 	/**
@@ -62,7 +66,7 @@ public class IRSearcher extends ViewPart {
 	public void createPartControl(Composite parent) {
 		// indexing();
 		parent.setLayout(null);
-		searcher = new Searcher();
+		
 		txtSearch = new Text(parent, SWT.BORDER);
 		txtSearch.setBounds(22, 37, 350, 21);
 		results = new ArrayList<>();
@@ -132,8 +136,9 @@ public class IRSearcher extends ViewPart {
 					float alpha = 1;
 					float beta = 1;
 					float gama = 1;
+					int decay = 1;
 					try {
-						query = searcher.expand(query, alpha, beta, gama, relevantDocuments);
+						query = searcher.expand(query, alpha, beta, gama, decay,relevantDocuments);
 						System.out.println("Rocchio query = " + query.toString());
 						fillResultsTable(searcher.searchIndex(query, 100));
 					} catch (Exception e1) {
@@ -156,9 +161,9 @@ public class IRSearcher extends ViewPart {
 		for (int i = 0; i < tblResults.getItemCount(); i++) {
 			Result res = (Result) tblResults.getItem(i).getData();
 			if (tblResults.getItem(i).getChecked()) {
-				relevantDocuments.add(res.getDocument());
+				relevantDocuments.add(res.getHit());
 			} else {
-				iRelevantDocuments.add(res.getDocument());
+				iRelevantDocuments.add(res.getHit());
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package indexing;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.search.ScoreDoc;
 
 public class Result {
 
@@ -8,6 +9,15 @@ public class Result {
 	private String Path;
 	private float score;
 	private Document document;
+	private ScoreDoc hit;
+
+	public ScoreDoc getHit() {
+		return hit;
+	}
+
+	public void setHit(ScoreDoc hit) {
+		this.hit = hit;
+	}
 
 	public Result(String fileName, String path) {		
 		this.fileName = fileName;

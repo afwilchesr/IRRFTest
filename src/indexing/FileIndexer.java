@@ -42,7 +42,7 @@ public class FileIndexer {
 	}
     public static void main(String[] args) throws Exception {
 
-        File indexDir = new File("index/");
+        File indexDir = new File("c:/index/");
         File dataDir = new File("D:\\Mis documentos\\NetBeansProjects");
         String suffix = "java";
 
@@ -114,16 +114,18 @@ public class FileIndexer {
 
         //Class s = Class.forName(f.getName().replaceAll(".java", ""));
         Document doc = new Document();
+        
 
-        doc.add(new Field("contents", new FileReader(f)));
+
+        doc.add(new Field("contents", new FileReader(f), Field.TermVector.YES));
         //oc.add(Field.TermVector);
         doc.add(new Field("filename", f.getCanonicalPath(),
-                Field.Store.YES, Field.Index.ANALYZED));
+                Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.YES));
       // Field
         
         for (String method : methods) {
             System.out.println("metodo " + method);
-            doc.add(new Field("method", method, Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("method", method, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.YES));
         }
         indexWriter.addDocument(doc);
 
