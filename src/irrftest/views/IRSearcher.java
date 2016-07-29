@@ -44,7 +44,7 @@ public class IRSearcher extends ViewPart {
 	private Query query;
 	private ArrayList<Result> results;
 	private ArrayList<ScoreDoc> relevantDocuments;
-	private ArrayList<ScoreDoc> iRelevantDocuments;
+	private ArrayList<ScoreDoc> noRelevantDocuments;
 
 	public IRSearcher() throws CorruptIndexException, IOException {
 		searcher = new FileSearcher();
@@ -66,12 +66,13 @@ public class IRSearcher extends ViewPart {
 	public void createPartControl(Composite parent) {
 		// indexing();
 		parent.setLayout(null);
-		
+
 		txtSearch = new Text(parent, SWT.BORDER);
 		txtSearch.setBounds(22, 37, 350, 21);
 		results = new ArrayList<>();
 		btnSearch = new Button(parent, SWT.NONE);
 		tblResults = new Table(parent, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+
 		tblResults.setHeaderVisible(false);
 		tblResults.setBounds(22, 79, 400, 250);
 
@@ -86,6 +87,10 @@ public class IRSearcher extends ViewPart {
 					ex.printStackTrace();
 				}
 				results = performSearch(query);
+				if (results.isEmpty()) {
+					JOptionPane.showMessageDialog(null, "There are not results.", "No results",
+							JOptionPane.INFORMATION_MESSAGE);
+				}
 				fillResultsTable(results);
 			}
 
@@ -97,20 +102,21 @@ public class IRSearcher extends ViewPart {
 
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				TableItem res = tblResults.getSelection()[0];
-				Result result = (Result) res.getData();
-				String file = result.getPath();
-				File fileToOpen = new File(file);
-				if (fileToOpen.exists() && fileToOpen.isFile()) {
-					IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
-					IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-					try {
-						IDE.openEditorOnFileStore(page, fileStore);
-					} catch (PartInitException exf) {
-						// Put your exception handler here if you wish to
+				int tableIndex = tblResults.getSelectionIndex();
+				if (tableIndex > 0 && tableIndex < tblResults.getItemCount()) {
+					TableItem res = tblResults.getItem(tableIndex);
+					Result result = (Result) res.getData();
+					String file = result.getPath();
+					File fileToOpen = new File(file);
+					if (fileToOpen.exists() && fileToOpen.isFile()) {
+						IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+						IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+						try {
+							IDE.openEditorOnFileStore(page, fileStore);
+						} catch (PartInitException exf) {
+							// Put your exception handler here if you wish to
+						}
 					}
-				} else {
-					// Do something if the file does not exist
 				}
 			}
 
@@ -138,38 +144,40 @@ public class IRSearcher extends ViewPart {
 					float gama = 1;
 					int decay = 1;
 					try {
-						query = searcher.expand(query, alpha, beta, gama, decay,relevantDocuments);
-						System.out.println("Rocchio query = " + query.toString());
+						query = searcher.expand(query, alpha, beta, gama, decay, relevantDocuments,
+								noRelevantDocuments);
+						// System.out.println("Rocchio query = " +
+						// query.toString());
 						fillResultsTable(searcher.searchIndex(query, 100));
 					} catch (Exception e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
-						JOptionPane.showMessageDialog(null, "Error making feedback","Error",JOptionPane.ERROR_MESSAGE);
-											
+						JOptionPane.showMessageDialog(null, "Error making feedback", "Error",
+								JOptionPane.ERROR_MESSAGE);
+
 					}
 				}
-
 				System.out.println("relevant: " + relevantDocuments.size());
-				System.out.println("irelevant: " + iRelevantDocuments.size());
+				System.out.println("irelevant: " + noRelevantDocuments.size());
 			}
 		});
 	}
 
 	private void getRelevantDocuments() {
 		relevantDocuments = new ArrayList<>();
-		iRelevantDocuments = new ArrayList<>();
+		noRelevantDocuments = new ArrayList<>();
 		for (int i = 0; i < tblResults.getItemCount(); i++) {
 			Result res = (Result) tblResults.getItem(i).getData();
 			if (tblResults.getItem(i).getChecked()) {
 				relevantDocuments.add(res.getHit());
 			} else {
-				iRelevantDocuments.add(res.getHit());
+				noRelevantDocuments.add(res.getHit());
 			}
 		}
 	}
 
 	private ArrayList<Result> performSearch(Query query) {
-		//File indexDir = new File("c:/index/");
+		// File indexDir = new File("c:/index/");
 		int hits = 100;
 		try {
 			return searcher.searchIndex(query, hits);
@@ -185,7 +193,7 @@ public class IRSearcher extends ViewPart {
 			TableItem tableItem = new TableItem(tblResults, SWT.NONE);
 			tableItem.setData(result);
 			tableItem.setText(result.getFileName() + String.format("   %.3f", result.getScore()));
-			
+
 		}
 	}
 

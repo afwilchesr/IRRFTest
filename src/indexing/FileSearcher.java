@@ -25,6 +25,7 @@ import org.apache.lucene.util.Version;
 
 public class FileSearcher {
 
+	private static final String FIELD_NAME = "method";
 	private IndexSearcher searcher;
 	private Analyzer analyzer;
 	private File indexDir;
@@ -37,7 +38,7 @@ public class FileSearcher {
 	}
 
 	public Query buildQuery(String queryStr) throws ParseException {
-		QueryParser parser = new QueryParser(Version.LUCENE_30, "contents", analyzer);
+		QueryParser parser = new QueryParser(Version.LUCENE_30,FIELD_NAME, analyzer);
 		return parser.parse(queryStr);
 	}
 
@@ -57,12 +58,10 @@ public class FileSearcher {
 			result.setScore(hits[i].score);
 			result.setDocument(d);
 			result.setHit(hits[i]);
-			results.add(result);
-			System.out.println(d.get("filename"));
-			String toString = hits[i].toString();
-			System.out.println(toString);
+			if(result.getScore()>0){
+				results.add(result);
+			}
 		}
-
 		System.out.println("Found " + hits.length);
 		return results;
 	}
@@ -73,24 +72,27 @@ public class FileSearcher {
 		return rocchio.expandRocchio(original, relevantDocs);
 	}
 	
-	public Query expand(Query original, float alpha, float beta, float gama, int decay,List<ScoreDoc> relevantDocs)
+	public Query expand(Query original, float alpha, float beta, float gama, int decay,
+			List<ScoreDoc> relevantDocs,List<ScoreDoc> noRelevantDocs)
 			throws CorruptIndexException, LockObtainFailedException, ParseException, IOException {
-		Vector<TermFreqVector> returnDoc = new Vector<TermFreqVector>();
+		Vector<TermFreqVector> relevantDocuments = new Vector<TermFreqVector>();
+		Vector<TermFreqVector> noRelevantDocuments = new Vector<TermFreqVector>();
 		System.out.println("relevant docs hits size: " + relevantDocs.size());
 		Directory dir = FSDirectory.open(indexDir);
 		IndexReader indexReader = IndexReader.open(dir);
 		for (ScoreDoc hit : relevantDocs) {
-			System.out.println("reader "+ indexReader.document(hit.doc));
-			System.out.println("hits doc " + hit.doc);
-			TermFreqVector vector = indexReader.getTermFreqVector(hit.doc, "contents");	
-			System.out.println(vector);
-			returnDoc.add( vector );
+			TermFreqVector vector = indexReader.getTermFreqVector(hit.doc, FIELD_NAME);	
+			relevantDocuments.add( vector );
+		}
+		for (ScoreDoc hit : noRelevantDocs) {
+			TermFreqVector vector = indexReader.getTermFreqVector(hit.doc, FIELD_NAME);	
+			noRelevantDocuments.add( vector );
 		}
 		
 		indexReader.close();
-		QueryExpander queryExpander = new QueryExpander(analyzer,original.getSimilarity(searcher) ,searcher,"contents",
+		QueryExpander queryExpander = new QueryExpander(analyzer,original.getSimilarity(searcher) ,searcher,FIELD_NAME,
 				alpha,beta,gama, decay);		
-		return queryExpander.expandQuery(original.toString(), returnDoc);
+		return queryExpander.expandQuery(original.toString(), relevantDocuments,noRelevantDocuments);
 	}
 	
 

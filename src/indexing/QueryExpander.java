@@ -20,15 +20,11 @@ import org.apache.lucene.util.Version;
  */
 
 public class QueryExpander {
-	public static final String DECAY_FLD = "QE.decay";
-	public static final String DOC_NUM_FLD = "QE.doc.num";
-	public static final String TERM_NUM_FLD = "QE.term.num";
-	public static final String ROCCHIO_ALPHA_FLD = "rocchio.alpha";
-	public static final String ROCCHIO_BETA_FLD = "rocchio.beta";
-	public static final String FIELD_NAME = "field.name";
+
+	public static final int TERM_NUM= 20;
+	
 
 	private Analyzer analyzer;
-	@SuppressWarnings("deprecation")
 	private Searcher searcher;
 	private Similarity similarity;
 	private Vector<TermQuery> expandedTerms;
@@ -90,21 +86,21 @@ public class QueryExpander {
 	/*
 	 * parse the parameters, and regulate the expansion
 	 */
-	public Query expandQuery(String queryStr, Vector<TermFreqVector> hits)
-			throws IOException, ParseException {
+	public Query expandQuery(String queryStr, Vector<TermFreqVector> relevantDocs, Vector<TermFreqVector> noRelevantDocs) throws IOException, ParseException {
 		// Load Necessary Values from Properties (Input)
 
-		int docNum = hits.size();
-		int termNum = 50;
+		int docNum = relevantDocs.size()+ noRelevantDocs.size();
+		int termNum = TERM_NUM;
 
 		// Create combine documents term vectors from the retrieved documents in
 		// the first time
 		// sum ( real term vectors * (1-decay * rank) )
-		Vector<QueryTermVector> docsTermVector = getDocsTerms(hits, docNum, analyzer);
+		Vector<QueryTermVector> relevantDocsTermVector = getDocsTerms(relevantDocs, relevantDocs.size(), analyzer);
+		Vector<QueryTermVector> noRelevantdocsTermVector = getDocsTerms(noRelevantDocs, noRelevantDocs.size(), analyzer);
 
 		// Adjust term features of the docs with alpha * query; and beta; and
 		// assign weights/boost to terms (tf*idf)
-		Query expandedQuery = adjust(docsTermVector, queryStr, alpha, beta, decay, docNum, termNum);
+		Query expandedQuery = adjust(relevantDocsTermVector,noRelevantdocsTermVector, queryStr, alpha, beta, gama,decay, docNum, termNum);
 
 		return expandedQuery;
 	}
@@ -114,59 +110,28 @@ public class QueryExpander {
 	 * need to regulate the documents before combine them. Load parameters and
 	 * expand query
 	 */
-	/*public Query expandQuery(Vector<QueryTermVector> docsTermVector, String queryStr, Properties prop)
-			throws IOException, ParseException {
-		// Load Necessary Values from Properties
-		float alpha = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_ALPHA_FLD)).floatValue();
-		float beta = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_BETA_FLD)).floatValue();
-		float decay = Float.valueOf(prop.getProperty(QueryExpander.DECAY_FLD, "0.0")).floatValue();
-		int docNum = Integer.valueOf(prop.getProperty(QueryExpander.DOC_NUM_FLD)).intValue();
-		int termNum = Integer.valueOf(prop.getProperty(QueryExpander.TERM_NUM_FLD)).intValue();
-
-		Query expandedQuery = adjust(docsTermVector, queryStr, alpha, beta, decay, docNum, termNum);
-
-		return expandedQuery;
-	}*/
-
 	/*
-	 * Same as expandQuery. Expand query to a set of term vectors, for the
-	 * compatibility of further developing.
+	 * public Query expandQuery(Vector<QueryTermVector> docsTermVector, String
+	 * queryStr, Properties prop) throws IOException, ParseException { // Load
+	 * Necessary Values from Properties float alpha =
+	 * Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_ALPHA_FLD)).
+	 * floatValue(); float beta =
+	 * Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_BETA_FLD)).
+	 * floatValue(); float decay =
+	 * Float.valueOf(prop.getProperty(QueryExpander.DECAY_FLD,
+	 * "0.0")).floatValue(); int docNum =
+	 * Integer.valueOf(prop.getProperty(QueryExpander.DOC_NUM_FLD)).intValue();
+	 * int termNum =
+	 * Integer.valueOf(prop.getProperty(QueryExpander.TERM_NUM_FLD)).intValue();
+	 * 
+	 * Query expandedQuery = adjust(docsTermVector, queryStr, alpha, beta,
+	 * decay, docNum, termNum);
+	 * 
+	 * return expandedQuery; }
 	 */
-	public Vector<TermQuery> expandQueryToTerm(String queryStr, Vector<TermFreqVector> hits, Properties prop)
-			throws IOException, ParseException {
-		// Load Necessary Values from Properties
-		float alpha = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_ALPHA_FLD)).floatValue();
-		float beta = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_BETA_FLD)).floatValue();
-		float decay = Float.valueOf(prop.getProperty(QueryExpander.DECAY_FLD, "0.0")).floatValue();
-		int docNum = Integer.valueOf(prop.getProperty(QueryExpander.DOC_NUM_FLD)).intValue();
 
-		// Create combine documents term vectors - sum ( rel term vectors )
-		Vector<QueryTermVector> docsTermVector = getDocsTerms(hits, docNum, analyzer);
+	
 
-		// Adjust term features of the docs with alpha * query; and beta; and
-		// assign weights/boost to terms (tf*idf)
-		Vector<TermQuery> expandedQuery = adjust(docsTermVector, queryStr, alpha, beta, decay, docNum);
-
-		return expandedQuery;
-	}
-
-	/*
-	 * Same as expandQuery. Expand query from doc terms into term vectors.
-	 */
-	public Vector<TermQuery> expandQueryToTerm(Vector<QueryTermVector> docsTermVector, String queryStr, Properties prop)
-			throws IOException, ParseException {
-		// Load Necessary Values from Properties
-		float alpha = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_ALPHA_FLD)).floatValue();
-		float beta = Float.valueOf(prop.getProperty(QueryExpander.ROCCHIO_BETA_FLD)).floatValue();
-		float decay = Float.valueOf(prop.getProperty(QueryExpander.DECAY_FLD, "0.0")).floatValue();
-		int docNum = Integer.valueOf(prop.getProperty(QueryExpander.DOC_NUM_FLD)).intValue();
-
-		// Adjust term features of the docs with alpha * query; and beta; and
-		// assign weights/boost to terms (tf*idf)
-		Vector<TermQuery> expandedQuery = adjust(docsTermVector, queryStr, alpha, beta, decay, docNum);
-
-		return expandedQuery;
-	}
 
 	/*
 	 * Adjust term features of the docs with alpha * query; and beta; and assign
@@ -193,51 +158,35 @@ public class QueryExpander {
 	 * 
 	 * @throws ParseException
 	 */
-	public Query adjust(Vector<QueryTermVector> docsTermsVector, String queryStr, float alpha, float beta, float decay,
-			int docsRelevantCount, int maxExpandedQueryTerms) throws IOException, ParseException {
-		Query expandedQuery;
+	
 
+	public Query  adjust(Vector<QueryTermVector> relevantDocsTermsVector,
+			Vector<QueryTermVector> noRelevantDocsTermsVector, String queryStr, float alpha, float beta, float gama,
+			float decay, int docsRelevantCount,int maxExpandedQueryTerms) throws IOException, ParseException {
+		   Query expandedQuery;
 		// setBoost of docs terms
-		beta = beta / docsTermsVector.size();
-		Vector<TermQuery> docsTerms = setBoost(docsTermsVector, beta, decay);
-
-		// Get queryTerms from the query and setBoost of query terms
-		QueryTermVector queryTermsVector = new QueryTermVector(queryStr, analyzer);
-		Vector<TermQuery> queryTerms = setBoost(queryTermsVector, alpha);
-
-		// combine weights according to expansion formula
-		Vector<TermQuery> expandedQueryTerms = combine(queryTerms, docsTerms);
-		setExpandedTerms(expandedQueryTerms);
-
-		// Sort by boost=weight
-		Comparator<Query> comparator = new QueryBoostComparator();
-		Collections.sort(expandedQueryTerms, comparator);
-
-		// Create Expanded Query
-		expandedQuery = mergeQueries(expandedQueryTerms, maxExpandedQueryTerms);
-
-		return expandedQuery;
-	}
-
-	public Vector<TermQuery> adjust(Vector<QueryTermVector> docsTermsVector, String queryStr, float alpha, float beta,
-			float decay, int docsRelevantCount) throws IOException, ParseException {
-		// setBoost of docs terms
-		beta = beta / docsTermsVector.size();
-		Vector<TermQuery> docsTerms = setBoost(docsTermsVector, beta, decay);
-
+		beta = beta / relevantDocsTermsVector.size();
+		Vector<TermQuery> relevantDocsTerms = setBoost(relevantDocsTermsVector, beta, decay);
+		gama = gama/noRelevantDocsTermsVector.size();
+		Vector<TermQuery> noRelevantDocsTerms = setBoost(noRelevantDocsTermsVector, gama, decay);
+	
 		// Get queryTerms from the query, setBoost of query terms
 		QueryTermVector queryTermsVector = new QueryTermVector(queryStr, analyzer);
 		Vector<TermQuery> queryTerms = setBoost(queryTermsVector, alpha);
 
 		// combine weights according to expansion formula
-		Vector<TermQuery> expandedQueryTerms = combine(queryTerms, docsTerms);
+		Vector<TermQuery> expandedQueryTerms = combine(queryTerms, relevantDocsTerms);		
+		expandedQueryTerms = combineNoRelevant(expandedQueryTerms, noRelevantDocsTerms);
 		setExpandedTerms(expandedQueryTerms);
 
 		// Sort by boost=weight
 		Comparator<Query> comparator = new QueryBoostComparator();
 		Collections.sort(expandedQueryTerms, comparator);
 
-		return expandedQueryTerms;
+		 // Create Expanded Query
+        expandedQuery = mergeQueries( expandedQueryTerms, maxExpandedQueryTerms );
+        
+        return expandedQuery;
 	}
 
 	/*
@@ -426,6 +375,30 @@ public class QueryExpander {
 
 		return terms;
 	}
+	
+	public Vector<TermQuery> combineNoRelevant(Vector<TermQuery> queryTerms, Vector<TermQuery> noRelevantdocsTerms) {
+		Vector<TermQuery> terms = new Vector<TermQuery>();
+		// Add Terms from the docsTerms
+		terms.addAll(noRelevantdocsTerms);
+
+		// Add Terms from queryTerms. If term already exists just combine their
+		// boosts
+		for (int i = 0; i < queryTerms.size(); i++) {
+			TermQuery qTerm = queryTerms.elementAt(i);
+			TermQuery term = find(qTerm, terms);
+
+			// Term already exists update its boost
+			if (term != null) {
+				float weight = qTerm.getBoost() - term.getBoost();
+				term.setBoost(weight);
+			}
+			// Term does not exist, add it
+			else {
+				terms.add(qTerm);
+			}
+		}
+		return terms;
+	}
 
 	/*
 	 * Find out duplicated terms
@@ -473,9 +446,9 @@ public class QueryExpander {
 		public int compare(Query q1, Query q2) {
 			if (q1.getBoost() > q2.getBoost()) {
 				return -1;
-			} else if  (q1.getBoost() < q2.getBoost()){
+			} else if (q1.getBoost() < q2.getBoost()) {
 				return 1;
-			}else{
+			} else {
 				return 0;
 			}
 		}
