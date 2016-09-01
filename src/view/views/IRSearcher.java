@@ -1,4 +1,4 @@
-package irrftest.views;
+package view.views;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,14 +8,16 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.swing.JOptionPane;
 
-import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.window.Window;
+import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -32,13 +34,16 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 
-import indexing.Result;
 import indexing.FileSearcher;
+import indexing.Result;
+import view.dialogs.FeedbackParametersDialog;
+import view.wizards.FileToIndexWizard;
 
 public class IRSearcher extends ViewPart {
 	private Text txtSearch;
 	private Button btnSearch;
 	private Button btnFeedback;
+	private Button btnSetup;
 	private Table tblResults;
 	private FileSearcher searcher;
 	private Query query;
@@ -68,7 +73,7 @@ public class IRSearcher extends ViewPart {
 		parent.setLayout(null);
 
 		txtSearch = new Text(parent, SWT.BORDER);
-		txtSearch.setBounds(22, 37, 350, 21);
+		txtSearch.setBounds(22, 50, 350, 21);
 		results = new ArrayList<>();
 		btnSearch = new Button(parent, SWT.NONE);
 		tblResults = new Table(parent, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
@@ -95,7 +100,7 @@ public class IRSearcher extends ViewPart {
 			}
 
 		});
-		btnSearch.setBounds(380, 35, 75, 25);
+		btnSearch.setBounds(380, 50, 75, 25);
 		btnSearch.setText("Search");
 
 		tblResults.addSelectionListener(new SelectionListener() {
@@ -103,7 +108,7 @@ public class IRSearcher extends ViewPart {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				int tableIndex = tblResults.getSelectionIndex();
-				if (tableIndex > 0 && tableIndex < tblResults.getItemCount()) {
+				if (tableIndex >= 0 && tableIndex < tblResults.getItemCount()) {
 					TableItem res = tblResults.getItem(tableIndex);
 					Result result = (Result) res.getData();
 					String file = result.getPath();
@@ -139,28 +144,52 @@ public class IRSearcher extends ViewPart {
 					JOptionPane.showMessageDialog(null, "You must select at least a result.", "Error",
 							JOptionPane.WARNING_MESSAGE);
 				} else {
+
+					FeedbackParametersDialog dialog = new FeedbackParametersDialog(parent.getShell());
+					dialog.create();
 					float alpha = 1;
 					float beta = 1;
 					float gama = 1;
-					int decay = 1;
-					try {
-						query = searcher.expand(query, alpha, beta, gama, decay, relevantDocuments,
-								noRelevantDocuments);
-						// System.out.println("Rocchio query = " +
-						// query.toString());
-						fillResultsTable(searcher.searchIndex(query, 100));
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-						JOptionPane.showMessageDialog(null, "Error making feedback", "Error",
-								JOptionPane.ERROR_MESSAGE);
-
+					if (dialog.open() == Window.OK) {
+						alpha = dialog.getAlpha();
+						beta = dialog.getBeta();
+						gama = dialog.getGama();
+						int decay = 0;
+						try {
+							query = searcher.expand(query, alpha, beta, gama, decay, relevantDocuments,
+									noRelevantDocuments);
+							// System.out.println("Rocchio query = " +
+							// query.toString());
+							fillResultsTable(searcher.searchIndex(query, 100));
+							System.out.println("relevant: " + relevantDocuments.size());
+							System.out.println("irelevant: " + noRelevantDocuments.size());
+						} catch (Exception e1) {
+							e1.printStackTrace();
+							JOptionPane.showMessageDialog(null, "Error making feedback", "Error",
+									JOptionPane.ERROR_MESSAGE);
+						}
 					}
+
 				}
-				System.out.println("relevant: " + relevantDocuments.size());
-				System.out.println("irelevant: " + noRelevantDocuments.size());
+
 			}
 		});
+
+		btnSetup = new Button(parent, SWT.NONE);
+		btnSetup.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				// FileToIndexSelector fileToIndex = new FileToIndexSelector();
+				WizardDialog wizardDialog = new WizardDialog(parent.getShell(), new FileToIndexWizard());
+				if (wizardDialog.open() == Window.OK) {
+					System.out.println("Ok pressed");
+				} else {
+					System.out.println("Cancel pressed");
+				}
+			}
+		});
+		btnSetup.setBounds(22, 10, 75, 25);
+		btnSetup.setText("Setup");
 	}
 
 	private void getRelevantDocuments() {
@@ -192,6 +221,8 @@ public class IRSearcher extends ViewPart {
 		for (Result result : results) {
 			TableItem tableItem = new TableItem(tblResults, SWT.NONE);
 			tableItem.setData(result);
+			Image image = JavaUI.getSharedImages().getImage(org.eclipse.jdt.ui.ISharedImages.IMG_OBJS_CUNIT);
+			tableItem.setImage(image);
 			tableItem.setText(result.getFileName() + String.format("   %.3f", result.getScore()));
 
 		}

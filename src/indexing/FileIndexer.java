@@ -10,6 +10,7 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
@@ -40,7 +41,9 @@ public class FileIndexer {
 		}
     	return new CharArraySet(javaStopWords, false);
 	}
-    public static void main(String[] args) throws Exception {
+	
+	
+    /*public static void main(String[] args) throws Exception {
 
         File indexDir = new File("c:/index/");
         File dataDir = new File("D:\\Mis documentos\\NetBeansProjects");
@@ -52,19 +55,26 @@ public class FileIndexer {
 
         System.out.println("Total files indexed " + numIndex);
 
-    }
+    }*/
 
-    private int index(File indexDir, File dataDir, String suffix) throws Exception {
-    	StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_30,getJavaStopWords());
-    	
-        IndexWriter indexWriter = new IndexWriter(
+    public static int index(File indexDir, File dataDir, String suffix) throws Exception {
+    	StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_30,getJavaStopWords()); 
+    	IndexWriter indexWriter;
+    	if(!IndexReader.indexExists(FSDirectory.open(indexDir))){
+    		indexWriter = new IndexWriter(
+            		//StandardAnalyzer.STOP_WORDS_SET;.
+                    FSDirectory.open(indexDir),
+                    analyzer,
+                    true,
+                    IndexWriter.MaxFieldLength.LIMITED);
+    	}else{
+         indexWriter = new IndexWriter(
         		//StandardAnalyzer.STOP_WORDS_SET;.
                 FSDirectory.open(indexDir),
                 analyzer,
-                true,
+                false,
                 IndexWriter.MaxFieldLength.LIMITED);
-        indexWriter.setUseCompoundFile(false);
-
+    	}
         indexDirectory(indexWriter, dataDir, suffix);
 
         int numIndexed = indexWriter.maxDoc();
@@ -75,7 +85,7 @@ public class FileIndexer {
 
     }
 
-    private void indexDirectory(IndexWriter indexWriter, File dataDir,
+    private static void indexDirectory(IndexWriter indexWriter, File dataDir,
             String suffix) throws IOException, ClassNotFoundException, ParseException {
 
         File[] files = dataDir.listFiles();
@@ -90,7 +100,7 @@ public class FileIndexer {
 
     }
 
-    private void indexFileWithIndexWriter(IndexWriter indexWriter, File f,
+    private static void indexFileWithIndexWriter(IndexWriter indexWriter, File f,
             String suffix) throws IOException, ClassNotFoundException, ParseException {
 
         if (f.isHidden() || f.isDirectory() || !f.canRead() || !f.exists()) {
@@ -99,9 +109,9 @@ public class FileIndexer {
         if (suffix != null && !f.getName().endsWith(suffix)) {
             return;
         }
-        if (f.getName().equals("EventoFrame.java")) {
-            return;
-        }
+        ;
+        
+		
         System.out.println("Indexing file " + f.getCanonicalPath());
         System.out.println(f.getAbsolutePath());
         CompilationUnit cu;
@@ -114,9 +124,6 @@ public class FileIndexer {
 
         //Class s = Class.forName(f.getName().replaceAll(".java", ""));
         Document doc = new Document();
-        
-
-
         doc.add(new Field("contents", new FileReader(f), Field.TermVector.YES));
         //oc.add(Field.TermVector);
         doc.add(new Field("filename", f.getCanonicalPath(),

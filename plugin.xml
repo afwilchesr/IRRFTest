@@ -12,7 +12,7 @@
             name="IR Searcher"
             icon="icons/sample.gif"
             category="IRRFTest"
-            class="irrftest.views.IRSearcher"
+            class="view.views.IRSearcher"
             id="irrftest.views.IRSearcher">
       </view>
    </extension>

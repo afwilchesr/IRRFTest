@@ -22,10 +22,13 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.util.Version;
+import org.eclipse.jdt.internal.corext.refactoring.reorg.ParentChecker;
+
+import view.dialogs.FeedbackParametersDialog;
 
 public class FileSearcher {
 
-	private static final String FIELD_NAME = "method";
+	private static final String FIELD_NAME = "contents";
 	private IndexSearcher searcher;
 	private Analyzer analyzer;
 	private File indexDir;
@@ -87,9 +90,8 @@ public class FileSearcher {
 		for (ScoreDoc hit : noRelevantDocs) {
 			TermFreqVector vector = indexReader.getTermFreqVector(hit.doc, FIELD_NAME);	
 			noRelevantDocuments.add( vector );
-		}
-		
-		indexReader.close();
+		}		
+		indexReader.close();		
 		QueryExpander queryExpander = new QueryExpander(analyzer,original.getSimilarity(searcher) ,searcher,FIELD_NAME,
 				alpha,beta,gama, decay);		
 		return queryExpander.expandQuery(original.toString(), relevantDocuments,noRelevantDocuments);
