@@ -13,4 +13,5 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .,
  lib/javaparser-core-2.4.1-SNAPSHOT.jar,
- lib/lucene-core-3.0.1.jar
+ lib/lucene-core-3.0.1.jar,
+ META-INF/

@@ -15,9 +15,42 @@ import org.eclipse.swt.widgets.Text;
 
 public class FileSelectorWizardPage extends WizardPage {
 	private Text txtPathToIndex;
-	private Text txtPathIndex;
 	private Button btnAddToExistent;
 	private Button btnCreateNew;
+	private Text txtLog;
+	private  StringBuilder log;
+
+	public Text getTxtLog() {
+		return txtLog;
+	}
+
+	public void setTxtLog(Text txtLog) {
+		this.txtLog = txtLog;
+	}
+
+	public StringBuilder getLog() {
+		return log;
+	}
+
+	public void setLog(String log) {		
+		txtLog.setText(this.log.append(log).toString());
+	}
+
+	public Button getBtnAddToExistent() {
+		return btnAddToExistent;
+	}
+
+	public void setBtnAddToExistent(Button btnAddToExistent) {
+		this.btnAddToExistent = btnAddToExistent;
+	}
+
+	public Button getBtnCreateNew() {
+		return btnCreateNew;
+	}
+
+	public void setBtnCreateNew(Button btnCreateNew) {
+		this.btnCreateNew = btnCreateNew;
+	}
 
 	public Text getTxtPathToIndex() {
 		return txtPathToIndex;
@@ -27,21 +60,15 @@ public class FileSelectorWizardPage extends WizardPage {
 		this.txtPathToIndex = txtPathToIndex;
 	}
 
-	public Text getTxtPathIndex() {
-		return txtPathIndex;
-	}
-
-	public void setTxtPathIndex(Text txtPathIndex) {
-		this.txtPathIndex = txtPathIndex;
-	}
-
+	
 	/**
 	 * Create the wizard.
 	 */
 	public FileSelectorWizardPage() {
 		super("wizardPage");
 		setTitle("Setup wizzard");
-		setDescription("Choose the folder to index and where store the index.");
+		setDescription("Choose the folder to index.");
+		log = new StringBuilder("Progress:\n");
 	}
 
 	/**
@@ -49,17 +76,19 @@ public class FileSelectorWizardPage extends WizardPage {
 	 * @param parent
 	 */
 	public void createControl(Composite parent) {
-		Composite cointainer = new Composite(parent, SWT.NULL);
+		Composite cointainer = new Composite(parent, SWT.BORDER);
 
 		setControl(cointainer);
 		cointainer.setLayout(new FormLayout());
 		
 		txtPathToIndex = new Text(cointainer, SWT.BORDER);
 		FormData fd_txtPathToIndex = new FormData();
+		fd_txtPathToIndex.left = new FormAttachment(0, 10);
 		txtPathToIndex.setLayoutData(fd_txtPathToIndex);
 		txtPathToIndex.setEditable(false);
 		
 		Button btnPathToIndex = new Button(cointainer, SWT.NONE);
+		fd_txtPathToIndex.right = new FormAttachment(btnPathToIndex, -18);
 		FormData fd_btnPathToIndex = new FormData();
 		fd_btnPathToIndex.right = new FormAttachment(0, 432);
 		fd_btnPathToIndex.top = new FormAttachment(0, 25);
@@ -82,28 +111,21 @@ public class FileSelectorWizardPage extends WizardPage {
 		Label lblFolderToIndex = new Label(cointainer, SWT.NONE);
 		fd_txtPathToIndex.top = new FormAttachment(lblFolderToIndex, 6);
 		FormData fd_lblFolderToIndex = new FormData();
+		fd_lblFolderToIndex.left = new FormAttachment(0, 10);
 		fd_lblFolderToIndex.bottom = new FormAttachment(100, -192);
 		lblFolderToIndex.setLayoutData(fd_lblFolderToIndex);
 		lblFolderToIndex.setBounds(50, 20, 500, 30);
 		
 		lblFolderToIndex.setText("Folder to index");
 		
-		Label lblIndexDirectory = new Label(cointainer, SWT.NONE);
-		fd_lblFolderToIndex.right = new FormAttachment(lblIndexDirectory, 0, SWT.RIGHT);
-		FormData fd_lblIndexDirectory = new FormData();
-		fd_lblIndexDirectory.left = new FormAttachment(0, 10);
-		lblIndexDirectory.setLayoutData(fd_lblIndexDirectory);
-		lblIndexDirectory.setText("Index directory");
-		
-		btnAddToExistent = new Button(cointainer, SWT.NONE);
-		fd_txtPathToIndex.left = new FormAttachment(btnAddToExistent, 0, SWT.LEFT);
+		btnAddToExistent = new Button(cointainer, SWT.RADIO);
 		FormData fd_btnAddToExistent = new FormData();
 		fd_btnAddToExistent.top = new FormAttachment(txtPathToIndex, 6);
 		fd_btnAddToExistent.right = new FormAttachment(0, 155);
 		fd_btnAddToExistent.left = new FormAttachment(0, 10);
 		btnAddToExistent.setLayoutData(fd_btnAddToExistent);
 		btnAddToExistent.setText("Add to existent Index");
-		btnAddToExistent.setVisible(false);
+		btnAddToExistent.setVisible(true);
 		
 		btnCreateNew = new Button(cointainer, SWT.RADIO);
 		FormData fd_btnCreateNew = new FormData();
@@ -111,37 +133,15 @@ public class FileSelectorWizardPage extends WizardPage {
 		fd_btnCreateNew.left = new FormAttachment(btnAddToExistent, 6);
 		btnCreateNew.setLayoutData(fd_btnCreateNew);
 		btnCreateNew.setText("Create a new Index");
-		btnCreateNew.setVisible(false);
+		btnCreateNew.setVisible(true);
 		
-		txtPathIndex = new Text(cointainer, SWT.BORDER);
-		fd_txtPathToIndex.right = new FormAttachment(txtPathIndex, 0, SWT.RIGHT);
-		fd_lblIndexDirectory.bottom = new FormAttachment(txtPathIndex, -6);
-		FormData fd_txtPathIndex = new FormData();
-		fd_txtPathIndex.left = new FormAttachment(0, 10);
-		fd_txtPathIndex.top = new FormAttachment(0, 97);
-		txtPathIndex.setLayoutData(fd_txtPathIndex);
-		txtPathIndex.setEditable(false);
-		
-		Button btnPathIndex = new Button(cointainer, SWT.NONE);
-		fd_txtPathIndex.right = new FormAttachment(btnPathIndex, -18);
-		btnPathIndex.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				DirectoryDialog dirDialog = new DirectoryDialog(parent.getShell());
-				dirDialog.setText("Folder to store the index");
-				dirDialog.setMessage("Select the folder where you want to store the index.");
-				String result = dirDialog.open();
-				txtPathIndex.setText(result);
-				System.out.println(result);
-			}
-		});
-		btnPathIndex.setText("Browse...");
-		FormData fd_btnPathIndex = new FormData();
-		fd_btnPathIndex.right = new FormAttachment(btnPathToIndex, 0, SWT.RIGHT);
-		fd_btnPathIndex.top = new FormAttachment(btnPathToIndex, 45);
-		fd_btnPathIndex.left = new FormAttachment(0, 362);
-		btnPathIndex.setLayoutData(fd_btnPathIndex);
+		txtLog = new Text(cointainer, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL
+				| SWT.MULTI);
+		FormData fd_txtLog = new FormData();
+		fd_txtLog.bottom = new FormAttachment(btnAddToExistent, 133, SWT.BOTTOM);
+		fd_txtLog.top = new FormAttachment(btnAddToExistent, 15);
+		fd_txtLog.left = new FormAttachment(0, 12);
+		fd_txtLog.right = new FormAttachment(0, 626);
+		txtLog.setLayoutData(fd_txtLog);
 	}
-
-	
 }
