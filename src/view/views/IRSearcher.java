@@ -1,6 +1,7 @@
 package view.views;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -84,6 +85,7 @@ public class IRSearcher extends ViewPart {
 		btnSearch.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
+				
 				String queryStr = txtSearch.getText().trim();
 				query = null;
 				try {
@@ -91,12 +93,17 @@ public class IRSearcher extends ViewPart {
 				} catch (ParseException ex) {
 					ex.printStackTrace();
 				}
+				try{
 				results = performSearch(query);
 				if (results.isEmpty()) {
 					JOptionPane.showMessageDialog(null, "There are not results.", "No results",
 							JOptionPane.INFORMATION_MESSAGE);
 				}
 				fillResultsTable(results);
+				}catch(IOException ex){
+					JOptionPane.showMessageDialog(null, "The index directory is not valid. go to setup.", "Index empty",
+							JOptionPane.ERROR_MESSAGE);
+				}
 			}
 
 		});
@@ -205,15 +212,11 @@ public class IRSearcher extends ViewPart {
 		}
 	}
 
-	private ArrayList<Result> performSearch(Query query) {
+	private ArrayList<Result> performSearch(Query query) throws IOException {
 		// File indexDir = new File("c:/index/");
-		int hits = 100;
-		try {
-			return searcher.searchIndex(query, hits);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			return new ArrayList<>();
-		}
+		int hits = 100;		
+		return searcher.searchIndex(query, hits);
+		
 	}
 
 	private void fillResultsTable(ArrayList<Result> results) {

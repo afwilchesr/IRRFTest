@@ -108,10 +108,8 @@ public class FileIndexer {
 		if (suffix != null && !f.getName().endsWith(suffix)) {
 			return;
 		}
-		;
-
+		
 		System.out.println("Indexing file " + f.getCanonicalPath());
-		System.out.println(f.getAbsolutePath());
 		CompilationUnit cu;
 		cu = JavaParser.parse(f);
 		MethodVisitior mv;
@@ -120,25 +118,19 @@ public class FileIndexer {
 
 		ArrayList<String> methods = mv.methods;
 
-		// Class s = Class.forName(f.getName().replaceAll(".java", ""));
 		Document doc = new Document();
 		doc.add(new Field("contents", new FileReader(f), Field.TermVector.YES));
-		// oc.add(Field.TermVector);
+	
 		doc.add(new Field("filename", f.getCanonicalPath(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-		// Field
-
+		
 		for (String method : methods) {
 			System.out.println("metodo " + method);
 			doc.add(new Field("method", method, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.YES));
 		}
-		// IndexReader.open(FSDirectory.open(FileSearcher.getIndexDir()),false)
-		// .deleteDocuments(new Term("filename", f.getCanonicalPath()));
-
-		// System.out.println(doc.get("filename"));
-		String log = "Indexed " + f.getAbsolutePath() + ".\n";
+		/*String log = "Indexed " + f.getAbsolutePath() + ".\n";
 		String text = FileToIndexWizard.fileSelectorPage.getTxtLog().getText();
-		FileToIndexWizard.fileSelectorPage.getTxtLog().setText(text.concat(log));
-		FileToIndexWizard.fileSelectorPage.getTxtLog().redraw();
+		FileToIndexWizard.fileSelectorPage.getTxtLog().setText(text.concat(log));*/
+		//FileToIndexWizard.fileSelectorPage.getTxtLog().
 		indexWriter.updateDocument(new Term("filename", f.getCanonicalPath()), doc);
 	}
 

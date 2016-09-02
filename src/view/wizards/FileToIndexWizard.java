@@ -4,18 +4,18 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.jface.wizard.Wizard;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
 import indexing.FileIndexer;
 import indexing.FileSearcher;
-import irrftest.Activator;
 
 public class FileToIndexWizard extends Wizard {
 
@@ -31,16 +31,25 @@ public class FileToIndexWizard extends Wizard {
 		addPage(fileSelectorPage);
 	}
 
-	/*private void modifyIndexDir(File indexDir) {
+	private void modifyIndexDirPref(File indexDir) {
+		Preferences preferences = ConfigurationScope.INSTANCE.getNode("IRRFTest");
+		Preferences sub1 = preferences.node("index");
+		sub1.put("indexFile", indexDir.getAbsolutePath());
+		try {
+			// forces the application to save the preferences
+			preferences.flush();
+		} catch (BackingStoreException e2) {
+			e2.printStackTrace();
+			JOptionPane.showMessageDialog(null, "error modifying preferences");
+		}
+	}
+
+	private void modifyIndexDir(File indexDir) {
 		OutputStream out = null;
 		try {
 
 			Properties props = new Properties();
-			//URL url = new URL("platform:/plugin/IRRFTest/build.properties");
-			for (File file : File.listRoots()) {
-				System.out.println(file.getAbsolutePath());
-			}
-			File f = new File(getClass().getResource("./META-INF/index.properties").getFile());
+			File f = new File(getClass().getClassLoader().getResource("/resources/index.properties").getFile());
 			System.out.println("build.prop path: " + f.getAbsolutePath());
 			if (f.exists()) {
 				props.load(new FileReader(f));
@@ -48,7 +57,7 @@ public class FileToIndexWizard extends Wizard {
 			}
 
 			out = new FileOutputStream(f);
-			props.store(out, "This is an optional header comment string");
+			props.store(out, "");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -65,24 +74,36 @@ public class FileToIndexWizard extends Wizard {
 				}
 			}
 		}
-	}*/
+	}
 
 	@Override
 	public boolean performFinish() {
-		//String pathIndex = fileSelectorPage.getTxtPathIndex().getText().trim();
+		String pathIndex = fileSelectorPage.getTxtPathIndex().getText().trim();
 		String pathToIndex = fileSelectorPage.getTxtPathToIndex().getText().trim();
 		boolean create = fileSelectorPage.getBtnCreateNew().getSelection();
-		if (pathToIndex.isEmpty()) {
-			JOptionPane.showMessageDialog(null, "You must select a folder to index", "Select a folder",
+		if (!pathToIndex.isEmpty() && pathIndex.isEmpty()) {
+			JOptionPane.showMessageDialog(null, "You must select a folder to store tne index", "Select a folder",
 					JOptionPane.WARNING_MESSAGE);
 			return false;
 		}
-		//File indexDir = new File(pathIndex);
+		File indexDir = new File(pathIndex);
 		File dataDir = new File(pathToIndex);
-		//FileSearcher.setIndexDir(indexDir);		
+		if(!indexDir.isDirectory()){
+			JOptionPane.showMessageDialog(null, "You must select a valid folder to store the index.", "Select a folder",
+					JOptionPane.WARNING_MESSAGE);
+			return false;
+		}else{
+			FileSearcher.setIndexDir(indexDir);
+			modifyIndexDirPref(indexDir);
+		}		
 		if (!pathToIndex.isEmpty()) {
 			try {
-				int numIndex = FileIndexer.index( dataDir, "java", create);
+				if(!indexDir.isDirectory()){
+					JOptionPane.showMessageDialog(null, "You must select a valid folder to index.", "Select a folder",
+							JOptionPane.WARNING_MESSAGE);
+					return false;
+				}
+				int numIndex = FileIndexer.index(dataDir, "java", create);
 				System.out.println("Total files indexed " + numIndex);
 				JOptionPane.showMessageDialog(null, "Total files indexed " + numIndex, "Files Indexed",
 						JOptionPane.INFORMATION_MESSAGE);

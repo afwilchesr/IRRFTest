@@ -1,6 +1,7 @@
 package indexing;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -24,6 +25,8 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.util.Version;
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
+import org.osgi.service.prefs.Preferences;
 
 public class FileSearcher {
 
@@ -41,26 +44,11 @@ public class FileSearcher {
 	}
 
 	public FileSearcher() throws CorruptIndexException, IOException {
-		Properties prop = new Properties();
-		InputStream input = null;
-		try {
-			input = getClass().getClassLoader().getResourceAsStream("build.properties");			
-			prop.load(input);
-			String index = prop.getProperty("index");
-			System.out.println("pred index: " + index);
-			indexDir = new File(index);
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		} finally {
-			if (input != null) {
-				try {
-					input.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
+		Preferences preferences = ConfigurationScope.INSTANCE.getNode("IRRFTest");
+		Preferences sub1 = preferences.node("index");
+		String index = sub1.get("indexFile","c:/index");
+		System.out.println("index= " + index);
+		indexDir = new File(index);
 		analyzer = new StandardAnalyzer(Version.LUCENE_30, FileIndexer.getJavaStopWords());
 	}
 
@@ -69,7 +57,7 @@ public class FileSearcher {
 		return parser.parse(queryStr);
 	}
 
-	public ArrayList<Result> searchIndex(Query query, int maxHits) throws Exception {
+	public ArrayList<Result> searchIndex(Query query, int maxHits) throws IOException {
 		ArrayList<Result> results = new ArrayList<>();
 		Directory directory = FSDirectory.open(indexDir);
 		System.out.println("indexDir: " +indexDir.getAbsolutePath());
