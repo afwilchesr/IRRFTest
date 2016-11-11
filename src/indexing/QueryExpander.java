@@ -76,7 +76,7 @@ public class QueryExpander {
 	 * 
 	 * @param prop: the set of parameters used in the expansion
 	 */
-	public QueryExpander(Analyzer analyzer, @SuppressWarnings("deprecation") Searcher searcher) {
+	public QueryExpander(Analyzer analyzer, Searcher searcher) {
 		this.analyzer = analyzer;
 		this.searcher = searcher;
 		this.similarity = null;

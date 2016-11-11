@@ -13,6 +13,8 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
+import indexing.FileSearcher;
+
 public class FileSelectorWizardPage extends WizardPage {
 	private Text txtPathToIndex;
 	private Text txtPathIndex;
@@ -60,6 +62,7 @@ public class FileSelectorWizardPage extends WizardPage {
 		super("wizardPage");
 		setTitle("Setup wizzard");
 		setDescription("Choose the folder to index.");
+		//txtPathIndex.setText(FileSearcher.getIndexDir().getAbsolutePath());
 	}
 
 	/**
@@ -112,6 +115,12 @@ public class FileSelectorWizardPage extends WizardPage {
 		lblFolderToIndex.setText("Folder to index");
 
 		btnAddToExistent = new Button(cointainer, SWT.RADIO);
+		btnAddToExistent.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				txtPathIndex.setText(FileSearcher.getIndexDir().getAbsolutePath());
+			}
+		});
 		FormData fd_btnAddToExistent = new FormData();
 		fd_btnAddToExistent.top = new FormAttachment(txtPathToIndex, 6);
 		fd_btnAddToExistent.right = new FormAttachment(0, 155);
@@ -129,6 +138,7 @@ public class FileSelectorWizardPage extends WizardPage {
 		btnCreateNew.setVisible(true);
 
 		txtLog = new Text(cointainer, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL | SWT.MULTI);
+		txtLog.setToolTipText("v");
 		FormData fd_txtLog = new FormData();
 		fd_txtLog.top = new FormAttachment(100, -83);
 		fd_txtLog.right = new FormAttachment(txtPathToIndex, 583);
@@ -141,8 +151,8 @@ public class FileSelectorWizardPage extends WizardPage {
 		// fd_txtLog1.top = new FormAttachment(txtPathIndex, 27);
 		//getTxtPathIndex().setEditable(false);
 		FormData fd_txtPathIndex = new FormData();
+		fd_txtPathIndex.bottom = new FormAttachment(txtLog, -6);
 		fd_txtPathIndex.left = new FormAttachment(txtPathToIndex, 0, SWT.LEFT);
-		fd_txtPathIndex.top = new FormAttachment(btnAddToExistent, 22);
 		fd_txtPathIndex.right = new FormAttachment(txtPathToIndex, 0, SWT.RIGHT);
 		getTxtPathIndex().setLayoutData(fd_txtPathIndex);
 
@@ -162,10 +172,17 @@ public class FileSelectorWizardPage extends WizardPage {
 		});
 		btnPathIndex.setText("Browse...");
 		FormData fd_btnPathIndex = new FormData();
+		fd_btnPathIndex.bottom = new FormAttachment(txtLog, -6);
 		fd_btnPathIndex.left = new FormAttachment(btnPathToIndex, 0, SWT.LEFT);
-		fd_btnPathIndex.bottom = new FormAttachment(getTxtPathIndex(), 0, SWT.BOTTOM);
 		fd_btnPathIndex.right = new FormAttachment(btnPathToIndex, 0, SWT.RIGHT);
 		btnPathIndex.setLayoutData(fd_btnPathIndex);
+		
+		Label lblPathIndex = new Label(cointainer, SWT.NONE);
+		FormData fd_lblPathIndex = new FormData();
+		fd_lblPathIndex.bottom = new FormAttachment(txtPathIndex, -6);
+		fd_lblPathIndex.left = new FormAttachment(txtPathToIndex, 0, SWT.LEFT);
+		lblPathIndex.setLayoutData(fd_lblPathIndex);
+		lblPathIndex.setText("Path Index");
 	}
 
 	public Text getTxtPathIndex() {

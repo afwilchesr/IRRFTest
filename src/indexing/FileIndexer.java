@@ -15,15 +15,9 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 
-import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
-import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-
-import view.views.IRSearcher;
-import view.wizards.FileSelectorWizardPage;
-import view.wizards.FileToIndexWizard;
 
 public class FileIndexer {
 
@@ -87,7 +81,6 @@ public class FileIndexer {
 
 	private static void indexDirectory(IndexWriter indexWriter, File dataDir, String suffix)
 			throws IOException, ClassNotFoundException, ParseException {
-
 		File[] files = dataDir.listFiles();
 		for (int i = 0; i < files.length; i++) {
 			File f = files[i];
@@ -108,29 +101,50 @@ public class FileIndexer {
 		if (suffix != null && !f.getName().endsWith(suffix)) {
 			return;
 		}
-		
-		System.out.println("Indexing file " + f.getCanonicalPath());
-		CompilationUnit cu;
-		cu = JavaParser.parse(f);
-		MethodVisitior mv;
-		mv = new MethodVisitior();
-		mv.visit(cu, null);
 
-		ArrayList<String> methods = mv.methods;
+		System.out.println("Indexing file " + f.getCanonicalPath());
+		/*
+		 * CompilationUnit cu; cu = JavaParser.parse(f); MethodVisitior mv; mv =
+		 * new MethodVisitior(); try{ mv.visit(cu, null); }catch(Exception ex){
+		 * System.out.println(ex.getMessage()); return; }
+		 */
+
+		// ArrayList<String> methods = mv.methods;
 
 		Document doc = new Document();
 		doc.add(new Field("contents", new FileReader(f), Field.TermVector.YES));
-	
+
 		doc.add(new Field("filename", f.getCanonicalPath(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-		
-		for (String method : methods) {
-			System.out.println("metodo " + method);
-			doc.add(new Field("method", method, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.YES));
-		}
-		/*String log = "Indexed " + f.getAbsolutePath() + ".\n";
-		String text = FileToIndexWizard.fileSelectorPage.getTxtLog().getText();
-		FileToIndexWizard.fileSelectorPage.getTxtLog().setText(text.concat(log));*/
-		//FileToIndexWizard.fileSelectorPage.getTxtLog().
+		//Text log = FileToIndexWizard.fileSelectorPage.getTxtLog();
+		/*
+		 * log.getDisplay().getDefault().asyncExec(new Runnable() { public void
+		 * run() { log.setText(log.getText() + "Indexing : " +
+		 * f.getAbsolutePath().toString() + "\n"); } });
+		 * 
+		 * Job job = new Job("") {
+		 * 
+		 * 
+		 * @Override protected IStatus run(IProgressMonitor monitor) {
+		 * while(!log.isDisposed()){
+		 * 
+		 * log.setText(log.getText() + "Indexing : " +
+		 * f.getAbsolutePath().toString() + "\n");
+		 * 
+		 * } return org.eclipse.core.runtime.Status.OK_STATUS; } };
+		 * job.schedule();
+		 */
+		/*
+		 * for (String method : methods) { System.out.println("metodo " +
+		 * method); doc.add(new Field("method", method, Field.Store.YES,
+		 * Field.Index.ANALYZED, Field.TermVector.YES)); }
+		 */
+		/*
+		 * String log = "Indexed " + f.getAbsolutePath() + ".\n"; String text =
+		 * FileToIndexWizard.fileSelectorPage.getTxtLog().getText();
+		 * FileToIndexWizard.fileSelectorPage.getTxtLog().setText(text.concat(
+		 * log));
+		 */
+		// FileToIndexWizard.fileSelectorPage.getTxtLog().
 		indexWriter.updateDocument(new Term("filename", f.getCanonicalPath()), doc);
 	}
 
@@ -140,8 +154,14 @@ public class FileIndexer {
 
 		@Override
 		public void visit(MethodDeclaration n, Object arg) {
+			/*
+			 * List<Statement> statements = n.getBody().getStmts(); for
+			 * (Statement st : statements) { st.toString() }
+			 */
 			if (!n.getName().equals("main")) {
 				methods.add(n.getName());
+				if (n.getBody() != null)
+					System.out.println(n.getBody().toString());
 			}
 		}
 

@@ -2,23 +2,18 @@ package view.dialogs;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Text;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
-import org.eclipse.swt.layout.RowLayout;
-import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.layout.FormData;
-import org.eclipse.swt.layout.FormAttachment;
 
 public class FeedbackParametersDialog extends Dialog {
 	private float alpha;
@@ -52,6 +47,7 @@ public class FeedbackParametersDialog extends Dialog {
 		lblAlpha.setText("Alpha");
 
 		spAlpha = new Spinner(container, SWT.BORDER);
+		spAlpha.setIncrement(5);
 		spAlpha.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, true, 1, 1));
 		spAlpha.setMaximum(10000);
 		spAlpha.setSelection(100);
@@ -61,6 +57,7 @@ public class FeedbackParametersDialog extends Dialog {
 		lblBeta.setText("Beta");
 
 		spBeta = new Spinner(container, SWT.BORDER);
+		spBeta.setIncrement(5);
 		spBeta.setDigits(2);
 		spBeta.setMaximum(10000);
 		spBeta.setSelection(100);
@@ -69,6 +66,7 @@ public class FeedbackParametersDialog extends Dialog {
 		lblGama.setText("Gama");
 
 		spGama = new Spinner(container, SWT.BORDER);
+		spGama.setIncrement(5);
 		spGama.setMaximum(10000);
 		spGama.setSelection(100);
 		spGama.setDigits(2);
@@ -89,7 +87,12 @@ public class FeedbackParametersDialog extends Dialog {
 			public void widgetSelected(SelectionEvent e) {
 			}
 		});
-		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, false);
+		Button button_1 = createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, false);
+		button_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+			}
+		});
 	}
 
 	public float getAlpha() {

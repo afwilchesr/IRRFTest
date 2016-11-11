@@ -9,6 +9,8 @@ import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.jface.wizard.Wizard;
 import org.osgi.service.prefs.BackingStoreException;
@@ -40,7 +42,10 @@ public class FileToIndexWizard extends Wizard {
 			preferences.flush();
 		} catch (BackingStoreException e2) {
 			e2.printStackTrace();
-			JOptionPane.showMessageDialog(null, "error modifying preferences");
+			MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_ERROR);
+			msg.setMessage("error modifying preferences");
+			msg.setText("Error");
+			msg.open();
 		}
 	}
 
@@ -82,15 +87,19 @@ public class FileToIndexWizard extends Wizard {
 		String pathToIndex = fileSelectorPage.getTxtPathToIndex().getText().trim();
 		boolean create = fileSelectorPage.getBtnCreateNew().getSelection();
 		if (!pathToIndex.isEmpty() && pathIndex.isEmpty()) {
-			JOptionPane.showMessageDialog(null, "You must select a folder to store tne index", "Select a folder",
-					JOptionPane.WARNING_MESSAGE);
+			MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_WARNING);
+			msg.setMessage("You must select a folder to store tne index");
+			msg.setText( "Select a folder");
+			msg.open();			
 			return false;
 		}
 		File indexDir = new File(pathIndex);
 		File dataDir = new File(pathToIndex);
 		if(!indexDir.isDirectory()){
-			JOptionPane.showMessageDialog(null, "You must select a valid folder to store the index.", "Select a folder",
-					JOptionPane.WARNING_MESSAGE);
+			MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_WARNING);
+			msg.setMessage("You must select a valid folder to store the index.");
+			msg.setText( "Select a folder");
+			msg.open();
 			return false;
 		}else{
 			FileSearcher.setIndexDir(indexDir);
@@ -99,18 +108,24 @@ public class FileToIndexWizard extends Wizard {
 		if (!pathToIndex.isEmpty()) {
 			try {
 				if(!indexDir.isDirectory()){
-					JOptionPane.showMessageDialog(null, "You must select a valid folder to index.", "Select a folder",
-							JOptionPane.WARNING_MESSAGE);
+					MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_WARNING);
+					msg.setMessage("You must select a valid folder to index.");
+					msg.setText( "Select a folder");
+					msg.open();			
 					return false;
 				}
 				int numIndex = FileIndexer.index(dataDir, "java", create);
 				System.out.println("Total files indexed " + numIndex);
-				JOptionPane.showMessageDialog(null, "Total files indexed " + numIndex, "Files Indexed",
-						JOptionPane.INFORMATION_MESSAGE);
+				MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_INFORMATION);
+				msg.setMessage("Total files indexed " + numIndex);
+				msg.setText("Files Indexed");
+				msg.open();
 				return true;
 			} catch (Exception e) {
-				JOptionPane.showMessageDialog(null, "Error indexing", "Error", JOptionPane.ERROR_MESSAGE);
-				e.printStackTrace();
+				MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_ERROR);
+				msg.setMessage("Error indexing");
+				msg.setText("Error");
+				msg.open();
 				return false;
 			}
 		}

@@ -3,10 +3,8 @@ package indexing;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.Vector;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -57,7 +55,7 @@ public class FileSearcher {
 		return parser.parse(queryStr);
 	}
 
-	public ArrayList<Result> searchIndex(Query query, int maxHits) throws IOException {
+	public ArrayList<Result> searchIndex(Query query, int maxHits) throws IOException, FileNotFoundException {
 		ArrayList<Result> results = new ArrayList<>();
 		Directory directory = FSDirectory.open(indexDir);
 		System.out.println("indexDir: " +indexDir.getAbsolutePath());

@@ -7,7 +7,6 @@ import java.util.ArrayList;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.swing.JOptionPane;
 
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.queryParser.ParseException;
@@ -26,6 +25,7 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
@@ -74,40 +74,50 @@ public class IRSearcher extends ViewPart {
 		parent.setLayout(null);
 
 		txtSearch = new Text(parent, SWT.BORDER);
-		txtSearch.setBounds(22, 50, 350, 21);
+		txtSearch.setBounds(22, 50, 273, 21);
 		results = new ArrayList<>();
 		btnSearch = new Button(parent, SWT.NONE);
 		tblResults = new Table(parent, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 
 		tblResults.setHeaderVisible(false);
-		tblResults.setBounds(22, 79, 400, 250);
+		tblResults.setBounds(22, 79, 365, 250);
 
 		btnSearch.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				
+
 				String queryStr = txtSearch.getText().trim();
 				query = null;
 				try {
-					query = searcher.buildQuery(queryStr);
+					if (!queryStr.isEmpty()) {
+						query = searcher.buildQuery(queryStr);
+					}
 				} catch (ParseException ex) {
 					ex.printStackTrace();
+					MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
+					msg.setMessage("Query format is not valid.");
+					msg.setText("Error");
+					msg.open();
 				}
-				try{
-				results = performSearch(query);
-				if (results.isEmpty()) {
-					JOptionPane.showMessageDialog(null, "There are not results.", "No results",
-							JOptionPane.INFORMATION_MESSAGE);
-				}
-				fillResultsTable(results);
-				}catch(IOException ex){
-					JOptionPane.showMessageDialog(null, "The index directory is not valid. go to setup.", "Index empty",
-							JOptionPane.ERROR_MESSAGE);
+				try {
+					results = performSearch(query);
+					if (results.isEmpty()) {
+						MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_INFORMATION);
+						msg.setMessage("There are not results.");
+						msg.setText("No results");
+						msg.open();
+					}
+					fillResultsTable(results);
+				} catch (IOException  ex) {
+					MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
+					msg.setMessage("The index directory is not valid. go to setup.");
+					msg.setText("Error");
+					msg.open();
 				}
 			}
 
 		});
-		btnSearch.setBounds(380, 50, 75, 25);
+		btnSearch.setBounds(313, 48, 75, 25);
 		btnSearch.setText("Search");
 
 		tblResults.addSelectionListener(new SelectionListener() {
@@ -142,14 +152,16 @@ public class IRSearcher extends ViewPart {
 		// tableResults.setVisible(false);
 		btnFeedback = new Button(parent, SWT.NONE);
 		btnFeedback.setText("Feedback");
-		btnFeedback.setBounds(180, 350, 100, 25);
+		btnFeedback.setBounds(150, 349, 100, 25);
 		btnFeedback.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				getRelevantDocuments();
 				if (tblResults.getItemCount() == 0 || relevantDocuments.size() == 0) {
-					JOptionPane.showMessageDialog(null, "You must select at least a result.", "Error",
-							JOptionPane.WARNING_MESSAGE);
+					MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_WARNING);
+					msg.setMessage("You must select at least a result.");
+					msg.setText("Select results");
+					msg.open();
 				} else {
 
 					FeedbackParametersDialog dialog = new FeedbackParametersDialog(parent.getShell());
@@ -172,8 +184,10 @@ public class IRSearcher extends ViewPart {
 							System.out.println("irelevant: " + noRelevantDocuments.size());
 						} catch (Exception e1) {
 							e1.printStackTrace();
-							JOptionPane.showMessageDialog(null, "Error making feedback", "Error",
-									JOptionPane.ERROR_MESSAGE);
+							MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
+							msg.setMessage("Error making feedback");
+							msg.setText("Error");
+							msg.open();
 						}
 					}
 
@@ -195,8 +209,11 @@ public class IRSearcher extends ViewPart {
 				}
 			}
 		});
-		btnSetup.setBounds(22, 10, 75, 25);
+		btnSetup.setBounds(22, 10, 75, 34);
 		btnSetup.setText("Setup");
+		// Image image =
+		// PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_ELCL_REMOVE);
+		// btnSetup.setImage(image);
 	}
 
 	private void getRelevantDocuments() {
@@ -212,7 +229,7 @@ public class IRSearcher extends ViewPart {
 		}
 	}
 
-	private ArrayList<Result> performSearch(Query query) throws IOException {
+	private ArrayList<Result> performSearch(Query query) throws IOException, FileNotFoundException{
 		// File indexDir = new File("c:/index/");
 		int hits = 100;		
 		return searcher.searchIndex(query, hits);
