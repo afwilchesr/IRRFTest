@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.jar.Attributes.Name;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -14,21 +16,46 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaModel;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IOpenable;
+import org.eclipse.jdt.core.ISourceReference;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.internal.core.JavaElement;
+import org.eclipse.jdt.internal.ui.javaeditor.EditorUtility;
 import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -54,6 +81,7 @@ public class IRSearcher extends ViewPart {
 
 	public IRSearcher() throws CorruptIndexException, IOException {
 		searcher = new FileSearcher();
+		results = new ArrayList<>();
 	}
 
 	/**
@@ -75,7 +103,7 @@ public class IRSearcher extends ViewPart {
 
 		txtSearch = new Text(parent, SWT.BORDER);
 		txtSearch.setBounds(22, 50, 273, 21);
-		results = new ArrayList<>();
+
 		btnSearch = new Button(parent, SWT.NONE);
 		tblResults = new Table(parent, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 
@@ -85,37 +113,30 @@ public class IRSearcher extends ViewPart {
 		btnSearch.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-
-				String queryStr = txtSearch.getText().trim();
-				query = null;
-				try {
-					if (!queryStr.isEmpty()) {
-						query = searcher.buildQuery(queryStr);
-					}
-				} catch (ParseException ex) {
-					ex.printStackTrace();
-					MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
-					msg.setMessage("Query format is not valid.");
-					msg.setText("Error");
-					msg.open();
-				}
-				try {
-					results = performSearch(query);
-					if (results.isEmpty()) {
-						MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_INFORMATION);
-						msg.setMessage("There are not results.");
-						msg.setText("No results");
-						msg.open();
-					}
-					fillResultsTable(results);
-				} catch (IOException  ex) {
-					MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
-					msg.setMessage("The index directory is not valid. go to setup.");
-					msg.setText("Error");
-					msg.open();
-				}
+				search(parent);
 			}
 
+		});
+		txtSearch.addSelectionListener(new SelectionListener() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				search(parent);
+
+			}
+
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {
+				search(parent);
+			}
+		});
+		txtSearch.addModifyListener(new ModifyListener() {
+
+			@Override
+			public void modifyText(ModifyEvent e) {
+				// search(parent);
+
+			}
 		});
 		btnSearch.setBounds(313, 48, 75, 25);
 		btnSearch.setText("Search");
@@ -129,15 +150,27 @@ public class IRSearcher extends ViewPart {
 					TableItem res = tblResults.getItem(tableIndex);
 					Result result = (Result) res.getData();
 					String file = result.getPath();
+					String method = result.getMethodName();
+					int parameters = result.getParameters();
 					File fileToOpen = new File(file);
 					if (fileToOpen.exists() && fileToOpen.isFile()) {
 						IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
 						IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-						try {
-							IDE.openEditorOnFileStore(page, fileStore);
-						} catch (PartInitException exf) {
-							// Put your exception handler here if you wish to
+						IJavaElement element;
+						IEditorPart editor;
+						try {						
+							editor = IDE.openEditorOnFileStore(page, fileStore);
+							ICompilationUnit root = (ICompilationUnit) EditorUtility.getEditorInputJavaElement(editor,
+									false);
+							element = findElement(method, root, parameters);
+							if(element != null){
+								JavaUI.revealInEditor(editor, element);
+							}
 						}
+						 catch (PartInitException | JavaModelException e1) {
+							e1.printStackTrace();
+						} 
+
 					}
 				}
 			}
@@ -229,11 +262,42 @@ public class IRSearcher extends ViewPart {
 		}
 	}
 
-	private ArrayList<Result> performSearch(Query query) throws IOException, FileNotFoundException{
+	private void search(Composite parent) {
+		String queryStr = txtSearch.getText().trim();
+		query = null;
+		try {
+			if (!queryStr.isEmpty()) {
+				query = searcher.buildQuery(queryStr);
+			}
+		} catch (ParseException ex) {
+			ex.printStackTrace();
+			MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
+			msg.setMessage("Query format is not valid.");
+			msg.setText("Error");
+			msg.open();
+		}
+		try {
+			results = performSearch(query);
+			if (results.isEmpty()) {
+				MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_INFORMATION);
+				msg.setMessage("There are not results.");
+				msg.setText("No results");
+				msg.open();
+			}
+			fillResultsTable(results);
+		} catch (IOException ex) {
+			MessageBox msg = new MessageBox(parent.getShell(), SWT.OK | SWT.ICON_ERROR);
+			msg.setMessage("The index directory is not valid. go to setup.");
+			msg.setText("Error");
+			msg.open();
+		}
+	}
+
+	private ArrayList<Result> performSearch(Query query) throws IOException, FileNotFoundException {
 		// File indexDir = new File("c:/index/");
-		int hits = 100;		
+		int hits = 100;
 		return searcher.searchIndex(query, hits);
-		
+
 	}
 
 	private void fillResultsTable(ArrayList<Result> results) {
@@ -241,9 +305,9 @@ public class IRSearcher extends ViewPart {
 		for (Result result : results) {
 			TableItem tableItem = new TableItem(tblResults, SWT.NONE);
 			tableItem.setData(result);
-			Image image = JavaUI.getSharedImages().getImage(org.eclipse.jdt.ui.ISharedImages.IMG_OBJS_CUNIT);
+			Image image = JavaUI.getSharedImages().getImage(org.eclipse.jdt.ui.ISharedImages.IMG_OBJS_PUBLIC);
 			tableItem.setImage(image);
-			tableItem.setText(result.getFileName() + String.format("   %.3f", result.getScore()));
+			tableItem.setText(result.toString());
 
 		}
 	}
@@ -252,6 +316,30 @@ public class IRSearcher extends ViewPart {
 	public void setFocus() {
 		// TODO Auto-generated method stub
 
+	}
+
+	private IJavaElement findElement(String method, ICompilationUnit root, int parameters) throws JavaModelException {
+		IJavaElement element = null;
+		IType[] types = root.getAllTypes();
+		//System.out.println(Arrays.toString(types));
+		for (int i = 0; i < types.length; i++) {
+			IMethod[] methods;
+			methods = types[i].getMethods();
+			for (int j = 0; j < methods.length; j++) {
+				//System.out.println();
+				System.out.println("element " + methods[j].toString());
+				//String aux = methods[j].toString().b);
+				//aux = aux.replace("element", "").trim();
+				//System.out.println(aux);
+				if (method.equalsIgnoreCase(methods[j].getElementName())
+						&& methods[j].getParameters().length == parameters) {					
+					//System.out.println("element " + methods[j].);
+					element = methods[j];
+					return element;
+				}
+			}
+		}
+		return element;
 	}
 
 	static class ResultListProvider extends LabelProvider {
@@ -265,7 +353,7 @@ public class IRSearcher extends ViewPart {
 		@Override
 		public String getText(Object element) {
 			Result result = (Result) element;
-			return result.getFileName() + String.format("%.3f", result.getScore());
+			return result.toString();
 		}
 
 	}

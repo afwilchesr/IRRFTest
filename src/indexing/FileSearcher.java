@@ -3,12 +3,17 @@ package indexing;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.PorterStemFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
@@ -24,6 +29,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.util.Version;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
+import org.eclipse.jdt.internal.corext.util.QualifiedTypeNameHistory;
 import org.osgi.service.prefs.Preferences;
 
 public class FileSearcher {
@@ -44,13 +50,17 @@ public class FileSearcher {
 	public FileSearcher() throws CorruptIndexException, IOException {
 		Preferences preferences = ConfigurationScope.INSTANCE.getNode("IRRFTest");
 		Preferences sub1 = preferences.node("index");
-		String index = sub1.get("indexFile","c:/index");
+		String index = sub1.get("indexFile","c:/index");	
 		System.out.println("index= " + index);
 		indexDir = new File(index);
 		analyzer = new StandardAnalyzer(Version.LUCENE_30, FileIndexer.getJavaStopWords());
+			
 	}
 
 	public Query buildQuery(String queryStr) throws ParseException {
+		queryStr = queryStr.toLowerCase().replaceAll("and", "AND").replaceAll("or", "OR");
+		queryStr = queryStr.replaceAll("not", "NOT");
+		System.out.println("Query: " + queryStr);
 		QueryParser parser = new QueryParser(Version.LUCENE_30, FIELD_NAME, analyzer);
 		return parser.parse(queryStr);
 	}
@@ -70,8 +80,11 @@ public class FileSearcher {
 			File f = new File(d.get("filename"));
 			Result result = new Result(f.getName().replaceAll(".java", ""), f.getAbsolutePath());
 			result.setScore(hits[i].score);
+			result.setMethodDeclaration(d.get("methodDeclaration"));
+			result.setMethodName(d.get("methodName"));
 			result.setDocument(d);
 			result.setHit(hits[i]);
+			result.setParameters(Integer.parseInt(d.get("parameters")));
 			if (result.getScore() > 0) {
 				results.add(result);
 			}
@@ -82,7 +95,7 @@ public class FileSearcher {
 
 	public Query expand(Query original, float alpha, float beta, float gama, List<Document> relevantDocs)
 			throws CorruptIndexException, LockObtainFailedException, ParseException, IOException {
-		RocchioExpander rocchio = new RocchioExpander(analyzer, "contents", alpha, beta, gama, 50, 50);
+		RocchioExpander rocchio = new RocchioExpander(analyzer, "contents", alpha, beta, gama, relevantDocs.size()*2,15);
 		return rocchio.expandRocchio(original, relevantDocs);
 	}
 

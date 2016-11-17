@@ -6,10 +6,13 @@ import org.apache.lucene.search.ScoreDoc;
 public class Result {
 
 	private String fileName;
+	private String methodName;
+	private String methodDeclaration;
 	private String Path;
 	private float score;
 	private Document document;
 	private ScoreDoc hit;
+	int parameters;
 
 	public ScoreDoc getHit() {
 		return hit;
@@ -56,6 +59,38 @@ public class Result {
 	public void setDocument(Document document) {
 		this.document = document;
 	}
+	
+	public String getMethodName() {
+		return methodName;
+	}
+
+	public void setMethodName(String methodName) {
+		this.methodName = methodName;
+	}
+
+	public String getMethodDeclaration() {
+		return methodDeclaration;
+	}
+
+	public void setMethodDeclaration(String methodDeclaration) {
+		this.methodDeclaration = methodDeclaration;
+	}
+
+	public int getParameters() {
+		return parameters;
+	}
+
+	public void setParameters(int parameters) {
+		this.parameters = parameters;
+	}
+
+	@Override
+	public String toString() {
+		return  fileName + "." + methodName + "\t   " + score;
+	}
+	
+	
+
 
 	
 }

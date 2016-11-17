@@ -1,7 +1,6 @@
 package indexing;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -15,7 +14,9 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 
+import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
+import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
@@ -34,6 +35,7 @@ public class FileIndexer {
 		}
 		return new CharArraySet(javaStopWords, false);
 	}
+
 
 	/*
 	 * public static void main(String[] args) throws Exception {
@@ -73,6 +75,7 @@ public class FileIndexer {
 
 		indexWriter.optimize();
 		indexWriter.expungeDeletes();
+		
 		int numIndexed = indexWriter.numDocs();
 		indexWriter.close();
 		return numIndexed;
@@ -101,56 +104,48 @@ public class FileIndexer {
 		if (suffix != null && !f.getName().endsWith(suffix)) {
 			return;
 		}
-
 		System.out.println("Indexing file " + f.getCanonicalPath());
-		/*
-		 * CompilationUnit cu; cu = JavaParser.parse(f); MethodVisitior mv; mv =
-		 * new MethodVisitior(); try{ mv.visit(cu, null); }catch(Exception ex){
-		 * System.out.println(ex.getMessage()); return; }
-		 */
+		CompilationUnit cu;		
+		cu = JavaParser.parse(f, "UTF-8");
+		MethodVisitior mv;
+		mv = new MethodVisitior();
+		try {
+			mv.visit(cu, null);
+		} catch (Exception ex) {
+			System.out.println(ex.getMessage());
+			return;
+		}
 
-		// ArrayList<String> methods = mv.methods;
+		ArrayList<MethodDeclaration> methods = mv.methods;
 
-		Document doc = new Document();
-		doc.add(new Field("contents", new FileReader(f), Field.TermVector.YES));
+		for (MethodDeclaration method : methods) {
+			Document doc = new Document();
+			// doc.add(new Field("contents", new FileReader(f),
+			// Field.TermVector.YES));
 
-		doc.add(new Field("filename", f.getCanonicalPath(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-		//Text log = FileToIndexWizard.fileSelectorPage.getTxtLog();
-		/*
-		 * log.getDisplay().getDefault().asyncExec(new Runnable() { public void
-		 * run() { log.setText(log.getText() + "Indexing : " +
-		 * f.getAbsolutePath().toString() + "\n"); } });
-		 * 
-		 * Job job = new Job("") {
-		 * 
-		 * 
-		 * @Override protected IStatus run(IProgressMonitor monitor) {
-		 * while(!log.isDisposed()){
-		 * 
-		 * log.setText(log.getText() + "Indexing : " +
-		 * f.getAbsolutePath().toString() + "\n");
-		 * 
-		 * } return org.eclipse.core.runtime.Status.OK_STATUS; } };
-		 * job.schedule();
-		 */
-		/*
-		 * for (String method : methods) { System.out.println("metodo " +
-		 * method); doc.add(new Field("method", method, Field.Store.YES,
-		 * Field.Index.ANALYZED, Field.TermVector.YES)); }
-		 */
-		/*
-		 * String log = "Indexed " + f.getAbsolutePath() + ".\n"; String text =
-		 * FileToIndexWizard.fileSelectorPage.getTxtLog().getText();
-		 * FileToIndexWizard.fileSelectorPage.getTxtLog().setText(text.concat(
-		 * log));
-		 */
-		// FileToIndexWizard.fileSelectorPage.getTxtLog().
-		indexWriter.updateDocument(new Term("filename", f.getCanonicalPath()), doc);
+			doc.add(new Field("filename", f.getCanonicalPath(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+			System.out.println("method " + method);
+			String declaration = method.getDeclarationAsString(false,false);
+			String name = method.getName();
+			int parameters = method.getParameters().size();			
+			doc.add(new Field("methodDeclaration", declaration, Field.Store.YES, Field.Index.NOT_ANALYZED));
+			doc.add(new Field("methodName", name, Field.Store.YES, Field.Index.NOT_ANALYZED));
+			doc.add(new Field("parameters", parameters + "", Field.Store.YES, Field.Index.NOT_ANALYZED));
+			if (method.getBody() != null)
+				doc.add(new Field("contents", declaration + " "
+						+ "\n"  + method.getBody().toString(), Field.Store.YES, Field.Index.ANALYZED,
+						Field.TermVector.YES));
+			indexWriter.updateDocument(new Term("methodDeclaration", declaration), doc);
+			//System.out.println(method.getParentNode().toString());
+		}
+	}
+
+	private static final class VoidVisitorAdapterExtension extends VoidVisitorAdapter {
 	}
 
 	static class MethodVisitior extends VoidVisitorAdapter {
 
-		ArrayList methods = new ArrayList();
+		ArrayList<MethodDeclaration> methods = new ArrayList();
 
 		@Override
 		public void visit(MethodDeclaration n, Object arg) {
@@ -159,9 +154,7 @@ public class FileIndexer {
 			 * (Statement st : statements) { st.toString() }
 			 */
 			if (!n.getName().equals("main")) {
-				methods.add(n.getName());
-				if (n.getBody() != null)
-					System.out.println(n.getBody().toString());
+				methods.add(n);			
 			}
 		}
 
