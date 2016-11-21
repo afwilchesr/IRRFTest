@@ -113,7 +113,8 @@ public class IRSearcher extends ViewPart {
 		btnSearch.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				search(parent);
+				if (!txtSearch.getText().trim().isEmpty())
+					search(parent);
 			}
 
 		});
@@ -121,13 +122,15 @@ public class IRSearcher extends ViewPart {
 
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				search(parent);
+				if (!txtSearch.getText().trim().isEmpty())
+					search(parent);
 
 			}
 
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {
-				search(parent);
+				if (!txtSearch.getText().trim().isEmpty())
+					search(parent);
 			}
 		});
 		txtSearch.addModifyListener(new ModifyListener() {
@@ -158,18 +161,17 @@ public class IRSearcher extends ViewPart {
 						IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 						IJavaElement element;
 						IEditorPart editor;
-						try {						
+						try {
 							editor = IDE.openEditorOnFileStore(page, fileStore);
 							ICompilationUnit root = (ICompilationUnit) EditorUtility.getEditorInputJavaElement(editor,
 									false);
 							element = findElement(method, root, parameters);
-							if(element != null){
+							if (element != null) {
 								JavaUI.revealInEditor(editor, element);
 							}
-						}
-						 catch (PartInitException | JavaModelException e1) {
+						} catch (PartInitException | JavaModelException e1) {
 							e1.printStackTrace();
-						} 
+						}
 
 					}
 				}
@@ -321,19 +323,19 @@ public class IRSearcher extends ViewPart {
 	private IJavaElement findElement(String method, ICompilationUnit root, int parameters) throws JavaModelException {
 		IJavaElement element = null;
 		IType[] types = root.getAllTypes();
-		//System.out.println(Arrays.toString(types));
+		// System.out.println(Arrays.toString(types));
 		for (int i = 0; i < types.length; i++) {
 			IMethod[] methods;
 			methods = types[i].getMethods();
 			for (int j = 0; j < methods.length; j++) {
-				//System.out.println();
+				// System.out.println();
 				System.out.println("element " + methods[j].toString());
-				//String aux = methods[j].toString().b);
-				//aux = aux.replace("element", "").trim();
-				//System.out.println(aux);
+				// String aux = methods[j].toString().b);
+				// aux = aux.replace("element", "").trim();
+				// System.out.println(aux);
 				if (method.equalsIgnoreCase(methods[j].getElementName())
-						&& methods[j].getParameters().length == parameters) {					
-					//System.out.println("element " + methods[j].);
+						&& methods[j].getParameters().length == parameters) {
+					// System.out.println("element " + methods[j].);
 					element = methods[j];
 					return element;
 				}

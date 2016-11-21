@@ -36,7 +36,6 @@ public class FileIndexer {
 		return new CharArraySet(javaStopWords, false);
 	}
 
-
 	/*
 	 * public static void main(String[] args) throws Exception {
 	 * 
@@ -69,17 +68,19 @@ public class FileIndexer {
 						FSDirectory.open(indexDir), analyzer, false, IndexWriter.MaxFieldLength.LIMITED);
 			}
 		}
-
-		System.out.println("numdocs" + IndexReader.open(FSDirectory.open(indexDir)).numDocs());
-		indexDirectory(indexWriter, dataDir, suffix);
-
-		indexWriter.optimize();
-		indexWriter.expungeDeletes();
-		
-		int numIndexed = indexWriter.numDocs();
-		indexWriter.close();
-		return numIndexed;
-
+		try {
+			System.out.println("numdocs" + IndexReader.open(FSDirectory.open(indexDir)).numDocs());
+			indexDirectory(indexWriter, dataDir, suffix);
+			indexWriter.optimize();
+			indexWriter.expungeDeletes();
+			int numIndexed = indexWriter.numDocs();
+			indexWriter.close();
+			return numIndexed;
+		} catch (ParseException e) {
+			indexWriter.rollback();
+			indexWriter.close();
+			throw new ParseException(e.getMessage());	
+		}
 	}
 
 	private static void indexDirectory(IndexWriter indexWriter, File dataDir, String suffix)
@@ -105,17 +106,11 @@ public class FileIndexer {
 			return;
 		}
 		System.out.println("Indexing file " + f.getCanonicalPath());
-		CompilationUnit cu;		
+		CompilationUnit cu;
 		cu = JavaParser.parse(f, "UTF-8");
 		MethodVisitior mv;
 		mv = new MethodVisitior();
-		try {
-			mv.visit(cu, null);
-		} catch (Exception ex) {
-			System.out.println(ex.getMessage());
-			return;
-		}
-
+		mv.visit(cu, null);
 		ArrayList<MethodDeclaration> methods = mv.methods;
 
 		for (MethodDeclaration method : methods) {
@@ -125,18 +120,18 @@ public class FileIndexer {
 
 			doc.add(new Field("filename", f.getCanonicalPath(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 			System.out.println("method " + method);
-			String declaration = method.getDeclarationAsString(false,false);
+			String declaration = method.getDeclarationAsString(false, false);
 			String name = method.getName();
-			int parameters = method.getParameters().size();			
-			doc.add(new Field("methodDeclaration", declaration, Field.Store.YES, Field.Index.NOT_ANALYZED));
+			int parameters = method.getParameters().size();
+			doc.add(new Field("methodDeclaration", f.getName() + "." + declaration, Field.Store.YES,
+					Field.Index.NOT_ANALYZED));
 			doc.add(new Field("methodName", name, Field.Store.YES, Field.Index.NOT_ANALYZED));
 			doc.add(new Field("parameters", parameters + "", Field.Store.YES, Field.Index.NOT_ANALYZED));
 			if (method.getBody() != null)
-				doc.add(new Field("contents", declaration + " "
-						+ "\n"  + method.getBody().toString(), Field.Store.YES, Field.Index.ANALYZED,
-						Field.TermVector.YES));
-			indexWriter.updateDocument(new Term("methodDeclaration", declaration), doc);
-			//System.out.println(method.getParentNode().toString());
+				doc.add(new Field("contents", declaration + " " + "\n" + method.getBody().toString(), Field.Store.YES,
+						Field.Index.ANALYZED, Field.TermVector.YES));
+			indexWriter.updateDocument(new Term("methodDeclaration", f.getName() + "." + declaration), doc);
+			// System.out.println(method.getParentNode().toString());
 		}
 	}
 
@@ -154,7 +149,7 @@ public class FileIndexer {
 			 * (Statement st : statements) { st.toString() }
 			 */
 			if (!n.getName().equals("main")) {
-				methods.add(n);			
+				methods.add(n);
 			}
 		}
 

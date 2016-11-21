@@ -123,10 +123,11 @@ public class FileToIndexWizard extends Wizard {
 				return true;
 			} catch (Exception e) {
 				MessageBox msg = new MessageBox(getShell(), SWT.OK|SWT.ICON_ERROR);
-				msg.setMessage("Error indexing" + e.getMessage());
+				System.out.println(e.toString());
+				msg.setMessage("Error indexing\n" + e.getMessage());
 				msg.setText("Error");
 				msg.open();
-				return false;
+				return true;
 			}
 		}
 		return true;
